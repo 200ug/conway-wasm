@@ -1,4 +1,4 @@
-## conway-wasm
+# conway-wasm
 
 Certainly a very useful gimmick for any conceivable website. As per the Game of Life, the animation follows the three seemingly simple rules:
 
