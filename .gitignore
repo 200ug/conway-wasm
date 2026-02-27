@@ -30,3 +30,11 @@ go.work.sum
 # Editor/IDE
 # .idea/
 # .vscode/
+
+# build artifacts
+*.wasm
+server
+
+# version dependent wrapper script ('cp "$(go env GOROOT)/lib/wasm/wasm_exec.js" .')
+wasm_exec.js
+
