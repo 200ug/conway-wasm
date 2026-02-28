@@ -2,7 +2,7 @@ import init, { Universe } from "./pkg/conway_wasm.js"
 
 const CELL_SIZE = 8
 const CELL_GAP = CELL_SIZE - 1
-const TICK_INTERVAL = 8
+const TICK_INTERVAL = 5
 
 const DEAD = 0
 const ALIVE = 1
@@ -72,7 +72,7 @@ async function main() {
             if (!running) return
     
             frame++
-            if (frame % TICK_INTERVAL === 0) {
+            if (frame % TICK_INTERVAL !== 0) {
                 animId = requestAnimationFrame(loop)
                 return
             }

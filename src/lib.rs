@@ -1,6 +1,6 @@
 use wasm_bindgen::prelude::*;
 
-const CHANCE: f32 = 0.2;
+const CHANCE: f32 = 0.3;
 
 #[wasm_bindgen]
 #[repr(u8)]
