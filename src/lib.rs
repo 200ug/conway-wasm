@@ -3,8 +3,8 @@ mod rle;
 use rle::{Stamp, easter_patterns, pick_weighted};
 use wasm_bindgen::prelude::*;
 
-const BG_FILL_CHANCE: f32 = 0.00; // kept low so stamped patterns stand out
-const CELLS_PER_PATTERN: u32 = 4000; // approx. number of cells per one stamped pattern
+const BG_FILL_CHANCE: f32 = 0.07; // kept low so stamped patterns stand out
+const CELLS_PER_PATTERN: u32 = 3500; // approx. number of cells per one stamped pattern
 const EASTER_CHANCE: f32 = 0.02; // probability of spawning an easter egg pattern per grid gen.
 const STAMP_MARGIN: u32 = 8; // min. clear margin (in cells) around each stamped pattern
 
@@ -34,6 +34,7 @@ pub struct Universe {
     height: u32,
     cells: Vec<Cell>,
     scratch: Vec<Cell>,
+    visited: Vec<bool>,
     pixels: Vec<u8>,
 }
 
@@ -127,6 +128,14 @@ impl Universe {
             }
         }
     }
+
+    fn mark_visited(&mut self) {
+        for i in 0..self.cells.len() {
+            if self.cells[i] == Cell::Alive {
+                self.visited[i] = true;
+            }
+        }
+    }
 }
 
 #[wasm_bindgen]
@@ -145,7 +154,8 @@ impl Universe {
             .collect();
 
         let scratch = vec![Cell::Dead; size];
-        let mut uni = Universe { width, height, cells, scratch, pixels: Vec::new() };
+        let visited = vec![false; size];
+        let mut uni = Universe { width, height, cells, scratch, visited, pixels: Vec::new() };
 
         // roll for an easter egg
         if rng.next_f32() < EASTER_CHANCE {
@@ -163,6 +173,8 @@ impl Universe {
                 uni.stamp(&stamp, ox, oy, true);
             }
 
+            uni.mark_visited();
+
             return uni;
         }
 
@@ -170,7 +182,7 @@ impl Universe {
         let num_patterns = (width * height) / CELLS_PER_PATTERN;
         console_log!("stamping {} patterns into universe", num_patterns);
         for _ in 0..num_patterns {
-            let entry = pick_weighted(rng.next_f32());
+            let Some(entry) = pick_weighted(rng.next_f32()) else { break };
             let base_stamp = Stamp::from_rle(entry.rle);
             let stamp = base_stamp.transform(rng.next_u8(8));
 
@@ -179,6 +191,8 @@ impl Universe {
 
             uni.stamp(&stamp, ox, oy, true);
         }
+
+        uni.mark_visited();
 
         uni
     }
@@ -195,9 +209,8 @@ impl Universe {
 
                 self.scratch[idx] = match cell {
                     Cell::Alive => {
-                        if n == 2 || n == 3 { Cell::Alive } else { Cell::Dimming }
+                        if n == 2 || n == 3 { Cell::Alive } else { Cell::Dead }
                     }
-                    Cell::Dimming => Cell::Fading,
                     _ => { // fading or dead
                         if n == 3 { Cell::Alive } else { Cell::Dead }
                     }
@@ -206,9 +219,10 @@ impl Universe {
         }
 
         std::mem::swap(&mut self.cells, &mut self.scratch);
+        self.mark_visited();
     }
 
-    pub fn render(&mut self, cw: u32, ch: u32, cell_size: u32, c_alive: u32, c_dimming: u32, c_fading: u32) -> *const u8 {
+    pub fn render(&mut self, cw: u32, ch: u32, cell_size: u32, c_alive: u32, c_visited: u32) -> *const u8 {
         let px_count = (cw * ch * 4) as usize;
         self.pixels.resize(px_count, 0);
         self.pixels.fill(0);
@@ -220,16 +234,16 @@ impl Universe {
             let py_base = cy * cell_size;
 
             for cx in 0..self.width {
-                let state = self.cells[cell_row + cx as usize];
-                if state == Cell::Dead {
-                    continue;
-                }
+                let cell_idx = cell_row + cx as usize;
+                let state = self.cells[cell_idx];
 
-                let rgba = match state {
-                    Cell::Alive => c_alive,
-                    Cell::Dimming => c_dimming,
-                    Cell::Fading => c_fading,
-                    _ => continue,
+                let rgba = if state == Cell::Alive {
+                    c_alive
+                } else if self.visited[cell_idx] {
+                    c_visited
+                } else { 
+                    // state: dead and never visited
+                    continue;
                 };
 
                 let r = ((rgba >> 24) & 0xFF) as u8;

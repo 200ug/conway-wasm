@@ -129,7 +129,7 @@ impl Stamp {
 }
 
 pub struct PatternEntry {
-    pub _name: &'static str, // just for in-code docs
+    pub _name: &'static str, // just for documenting tests
     pub rle: &'static str,
     pub weight: u32, // relative spawn weight
     pub easter: bool, // pattern limited to easter eggs only
@@ -137,22 +137,10 @@ pub struct PatternEntry {
 
 pub static PATTERNS: &[PatternEntry] = &[
     PatternEntry {
-        _name: "glider",
+        _name: "regular glider",
         rle: "bo$2bo$3o!",
-        weight: 10,
+        weight: 100,
         easter: false,
-    },
-    PatternEntry {
-        _name: "pulsar",
-        rle: "2b3o3b3o2b$13b$o4bobo4bo$o4bobo4bo$o4bobo4bo$2b3o3b3o2b$13b$2b3o3b3o2b$o4bobo4bo$o4bobo4bo$o4bobo4bo$13b$2b3o3b3o!",
-        weight: 4,
-        easter: false,
-    },
-    PatternEntry {
-        _name: "gosper-glider-gun",
-        rle: "24bo11b$22bobo11b$12b2o6b2o12b2o$11bo3bo4b2o12b2o$2o8bo5bo3b2o14b$2o8bo3bob2o4bobo11b$10bo5bo7bo11b$11bo3bo20b$12b2o!",
-        weight: 1,
-        easter: true,
     },
 ];
 
@@ -166,24 +154,68 @@ pub fn easter_patterns() -> Vec<&'static PatternEntry> {
 
 /// pick a random normal pattern using weights.
 /// 'r' should be a value in range [0, 1).
-pub fn pick_weighted(r: f32) -> &'static PatternEntry {
+pub fn pick_weighted(r: f32) -> Option<&'static PatternEntry> {
     let normals = normal_patterns();
+
+    if normals.is_empty() {
+        return None;
+    }
+
     let total: u32 = normals.iter().map(|p| p.weight).sum();
     let mut threshold = r * total as f32;
 
     for p in &normals {
         threshold -= p.weight as f32;
         if threshold <= 0.0 {
-            return p;
+            return Some(p);
         }
     }
 
-    normals.last().unwrap()
+    Some(normals.last().unwrap())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn parse_glider() {
+        let s = Stamp::from_rle("bo$2bo$3o!");
+        assert_eq!(s.width, 3);
+        assert_eq!(s.height, 3);
+        /*
+            .#.
+            ..#
+            ###
+        */
+        let expected = vec![
+            false, true, false,
+            false, false, true,
+            true, true, true,
+        ];
+        assert_eq!(s.cells, expected);
+    }
+
+    #[test]
+    fn parse_with_headers() {
+        let rle = "\
+            #N Glider\n\
+            #O Richard K. Guy\n\
+            x = 3, y = 3, rule = B3/S23\n\
+            bo$2bo$3o!\n";
+        let s = Stamp::from_rle(rle);
+        assert_eq!(s.width, 3);
+        assert_eq!(s.height, 3);
+    }
+
+    #[test]
+    fn rotation_preserves_area() {
+        let s = Stamp::from_rle("3o$o2b$o!");
+        let r = s.rotate_cw();
+        assert_eq!(r.width, s.height);
+        assert_eq!(r.height, s.width);
+        assert_eq!(r.cells.len(), s.cells.len());
+    }
 
     #[test]
     fn all_patterns_parse() {

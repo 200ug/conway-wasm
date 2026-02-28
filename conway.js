@@ -1,13 +1,7 @@
 import init, { Universe } from "./pkg/conway_wasm.js"
 
 const CELL_SIZE = 8
-const CELL_GAP = CELL_SIZE - 1
 const TICK_INTERVAL = 5
-
-const DEAD = 0
-const ALIVE = 1
-const DIMMING = 2
-const FADING = 3
 
 async function main() {
     const canvas = document.getElementById("conway-bg")
@@ -34,8 +28,7 @@ async function main() {
 
     const style = getComputedStyle(document.documentElement)
     const cAlive = packRGBA(style.getPropertyValue("--conway-alive"))
-    const cDimming = packRGBA(style.getPropertyValue("--conway-dimming"))
-    const cFading = packRGBA(style.getPropertyValue("--conway-fading"))
+    const cVisited = packRGBA(style.getPropertyValue("--conway-visited"))
 
     let wasm = null
     let universe = null
@@ -79,7 +72,8 @@ async function main() {
             universe.tick()
     
             // render pixels in wasm, returns pointer to rgba buffer
-            const ptr = universe.render(w, h, CELL_SIZE, cAlive, cDimming, cFading)
+            // `render(w, h, cell_size, color_alive, color_visited)`
+            const ptr = universe.render(w, h, CELL_SIZE, cAlive, cVisited)
             const pixels = new Uint8ClampedArray(wasm.memory.buffer, ptr, w * h * 4)
             const imageData = new ImageData(pixels, w, h)
             ctx.putImageData(imageData, 0, 0)
