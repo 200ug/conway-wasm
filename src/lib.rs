@@ -1,6 +1,6 @@
 mod rle;
 
-use rle::{Stamp, easter_patterns, pick_weighted};
+use rle::{Stamp, pick_weighted};
 use wasm_bindgen::prelude::*;
 
 const BG_FILL_CHANCE: f32 = 0.07; // kept low so stamped patterns stand out
@@ -146,10 +146,13 @@ impl Universe {
         let seed = (random() * u64::MAX as f64) as u64;
         let mut rng = Rng::new(seed);
 
+        // roll for an easter egg
+        let is_easter = rng.next_f32() < EASTER_CHANCE;
+
         // sparse random bg
         let cells: Vec<Cell> = (0..size)
             .map(|_| {
-                if rng.next_f32() < BG_FILL_CHANCE { Cell::Alive } else { Cell::Dead }
+                if !is_easter && rng.next_f32() < BG_FILL_CHANCE { Cell::Alive } else { Cell::Dead }
             })
             .collect();
 
@@ -157,40 +160,43 @@ impl Universe {
         let visited = vec![false; size];
         let mut uni = Universe { width, height, cells, scratch, visited, pixels: Vec::new() };
 
-        // roll for an easter egg
-        if rng.next_f32() < EASTER_CHANCE {
-            console_log!("hit an easter egg!");
-            let eggs = easter_patterns();
+        if is_easter {
+            let raw_entry = pick_weighted(rng.next_f32(), true);
             
-            if !eggs.is_empty() {
-                let idx = rng.next_u32(eggs.len() as u32) as usize;
-                let base_stamp = Stamp::from_rle(eggs[idx].rle);
+            if let Some(entry) = raw_entry {
+                console_log!("hit an easter egg '{}'!", entry._name);
+                
+                let base_stamp = Stamp::from_rle(entry.rle);
                 let stamp = base_stamp.transform(rng.next_u8(8));
 
                 let ox = rng.next_u32(width);
                 let oy = rng.next_u32(height);
 
                 uni.stamp(&stamp, ox, oy, true);
+                uni.mark_visited();
+
+                return uni;
             }
-
-            uni.mark_visited();
-
-            return uni;
         }
 
         // stamp known patterns at random positions
         let num_patterns = (width * height) / CELLS_PER_PATTERN;
-        console_log!("stamping {} patterns into universe", num_patterns);
+        let mut names = Vec::new();
         for _ in 0..num_patterns {
-            let Some(entry) = pick_weighted(rng.next_f32()) else { break };
+            let Some(entry) = pick_weighted(rng.next_f32(), false) else { break };
             let base_stamp = Stamp::from_rle(entry.rle);
             let stamp = base_stamp.transform(rng.next_u8(8));
+
+            names.push(entry._name);
 
             let ox = rng.next_u32(width);
             let oy = rng.next_u32(height);
 
             uni.stamp(&stamp, ox, oy, true);
         }
+
+        console_log!("stamped {} patterns", num_patterns);
+        console_log!("{:#?}", names);
 
         uni.mark_visited();
 
