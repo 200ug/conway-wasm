@@ -198,7 +198,7 @@ impl Universe {
                         if n == 2 || n == 3 { Cell::Alive } else { Cell::Dimming }
                     }
                     Cell::Dimming => Cell::Fading,
-                    _ => { // dimming or dead
+                    _ => { // fading or dead
                         if n == 3 { Cell::Alive } else { Cell::Dead }
                     }
                 };
