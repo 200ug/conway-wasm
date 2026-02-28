@@ -1,20 +1,15 @@
-<html>
+<!doctype html>
+<html lang="en-US">
   <head>
-    <meta charset="utf-8"/>
+    <meta charset="utf-8" />
     <link rel="stylesheet" href="main.css" />
-    <script src="wasm_exec.js"></script>
-    <script>
-      const go = new Go()
-      WebAssembly.instantiateStreaming(fetch("conway.wasm"), go.importObject).then((result) => {
-          go.run(result.instance)
-      })
-    </script>
   </head>
   <body>
+    <script type="module" src="conway.js"></script>
     <canvas id="conway-bg"></canvas>
     <div id="content">
       <!-- page content here -->
-      <button id="conway-toggle">Start</button>
+      <button id="conway-toggle">GoL</button>
     </div>
   </body>
 </html>
